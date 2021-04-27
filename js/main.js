@@ -1,23 +1,36 @@
-window.onload = function (event) {
-  const root = document.getElementById("root");
-  buildQuiz(root);
+const quizRoot = document.getElementById("quiz");
+const quiz = {
+  title: null,
+  description: null,
+  questions: null,
+  questionsHTMLElement: [],
+  answeredQuestions: [],
+  current: 0,
 };
 
-const buildQuiz = async (rootElement) => {
-  const quiz = await getQuestions();
-  if (quiz) {
-    const loader = document.getElementById("loader");
-    loader.style.display = "none";
+const buildQuiz = async () => {
+  const response = await getQuestions();
+  quiz.questions = response.questions;
+  quiz.title = response.title;
+  quiz.description = response.description;
 
-    rootElement.appendChild(buildHeader(quiz.title, quiz.description));
+  const loader = document.getElementById("loader");
+  loader.style.display = "none";
 
-    const questions = [];
-    quiz.questions.forEach((element) => {
-      questions.push(buildQuizQuestion(element));
-    });
+  quizRoot.appendChild(buildHeader(quiz.title, quiz.description));
+  quiz.questions.forEach((element) => {
+    quiz.questionsHTMLElement.push(buildQuizQuestion(element, quiz.questions));
+  });
 
-    console.log(questions);
+  displayQuestion(quiz.current);
+};
+
+const displayQuestion = (index) => {
+  const previousQuestion = document.getElementById("question");
+  if (previousQuestion) {
+    quizRoot.removeChild(previousQuestion);
   }
+  quizRoot.appendChild(quiz.questionsHTMLElement[index]);
 };
 
 const buildHeader = (title, description) => {
@@ -35,19 +48,20 @@ const buildHeader = (title, description) => {
 
 const buildPossibleAnswer = (type, element, parent) => {
   const answerContainer = document.createElement("div");
-  answerContainer.id = element.a_id;
+  answerContainer.id = `ans-${element.a_id}`;
 
   const label = document.createElement("label");
   label.htmlFor = element.a_id;
   label.innerText = element.caption;
 
-  const radio = document.createElement("input");
-  radio.type = type;
-  radio.value = element.id;
-  radio.name = element.id;
+  const input = document.createElement("input");
+  input.name = "answer";
+  input.type = type;
+  input.value = element.a_id;
+  input.id = element.a_id;
 
+  answerContainer.appendChild(input);
   answerContainer.appendChild(label);
-  answerContainer.appendChild(radio);
 
   parent.appendChild(answerContainer);
 };
@@ -55,16 +69,22 @@ const buildPossibleAnswer = (type, element, parent) => {
 const buildQuizQuestion = (question) => {
   const questionContainer = document.createElement("div");
   questionContainer.className = "question-container";
-
-  const questionTitle = document.createElement("h2");
-  questionTitle.innerText = question.title;
+  questionContainer.id = "question";
 
   const questionImage = document.createElement("img");
   questionImage.src = question.img;
   questionImage.alt = "";
 
-  const possibleAnswersContainer = document.createElement("div");
-  possibleAnswersContainer.className = "question-answers";
+  const questionTitle = document.createElement("h3");
+  questionTitle.innerText = question.title;
+
+  const possibleAnswersContainer = document.createElement("form");
+  possibleAnswersContainer.id = "answersForm";
+  possibleAnswersContainer.className = "question-answer";
+  possibleAnswersContainer.onsubmit = onFormSubmit;
+
+  const questionBody = document.createElement("div");
+  questionBody.className = "question-body";
 
   switch (question.question_type) {
     case "multiplechoice-single":
@@ -80,7 +100,7 @@ const buildQuizQuestion = (question) => {
       labelTrue.innerText = "True";
 
       const radioTrue = document.createElement("input");
-      radioTrue.name = "trueOrFalse";
+      radioTrue.name = "answer";
       radioTrue.id = "radioTrue";
       radioTrue.type = "radio";
       radioTrue.value = true;
@@ -92,7 +112,7 @@ const buildQuizQuestion = (question) => {
       labelFalse.innerText = "False";
 
       const radioFalse = document.createElement("input");
-      radioFalse.name = "trueOrFalse";
+      radioFalse.name = "answer";
       radioFalse.id = "radioFalse";
       radioFalse.type = "radio";
       radioFalse.value = false;
@@ -114,17 +134,56 @@ const buildQuizQuestion = (question) => {
       console.error("Unexpected question type");
   }
 
-  const button = document.createElement("div");
+  const button = document.createElement("button");
   button.className = "button";
+  button.innerText = quiz.current < 8 ? "Next question" : "Finish";
 
-  button.addEventListener("click", function () {
-    //Validate question before moving to next question
-  });
+  possibleAnswersContainer.appendChild(button);
 
-  questionContainer.appendChild(questionTitle);
+  questionBody.appendChild(questionTitle);
+  questionBody.appendChild(possibleAnswersContainer);
+
   questionContainer.appendChild(questionImage);
-  questionContainer.appendChild(possibleAnswersContainer);
-  questionContainer.appendChild(button);
+  questionContainer.appendChild(questionBody);
 
   return questionContainer;
+};
+
+const onFormSubmit = (event) => {
+  event.preventDefault();
+  console.log(quiz.current);
+  if (quiz.current < quiz.questions.length - 1) {
+    let answer;
+    const checkBoxes = document.querySelectorAll(
+      "input[type=checkbox]:checked"
+    );
+    console.log(checkBoxes);
+    if (checkBoxes.length > 0) {
+      answer = [];
+      Array.from(checkBoxes).forEach((item) => {
+        answer.push(item.value);
+      });
+    } else {
+      answer = event.target.elements.answer.value;
+    }
+    quiz.answeredQuestions.push(answer);
+    quiz.current += 1;
+
+    displayQuestion(quiz.current);
+    return false;
+  }
+  console.log(quiz.answeredQuestions);
+  reloadQuiz();
+  return false;
+};
+
+const reloadQuiz = () => {
+  quiz.answeredQuestions.length = 0;
+  quiz.current = 0;
+  displayQuestion(quiz.current);
+  document.getElementById("answersForm").reset();
+};
+
+window.onload = function (event) {
+  buildQuiz();
 };

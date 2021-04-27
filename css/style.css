@@ -22,6 +22,10 @@ img {
   border: 0;
 }
 
+img {
+  width: 50%;
+}
+
 body {
   line-height: 1;
 }
@@ -36,8 +40,11 @@ body {
   background-color: white;
 }
 
-#root {
-  margin: 16px;
+#quiz {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 header {
@@ -45,4 +52,39 @@ header {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  padding: 22px;
+}
+
+.question-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 22px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.question-container img {
+  width: 100%;
+}
+
+.question-answer {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+  gap: 5px;
+}
+
+.question-body {
+  padding: 18px;
+}
+
+.question-answer label {
+  cursor: pointer;
+}
+
+.button {
+  margin: 20px;
+  height: 45px;
+  width: 50%;
+  align-self: center;
 }

@@ -6,6 +6,7 @@ const quiz = {
   questionsHTMLElement: [],
   answeredQuestions: [],
   current: 0,
+  score: 0,
 };
 
 const buildQuiz = async () => {
@@ -94,33 +95,36 @@ const buildQuizQuestion = (question) => {
       break;
     case "truefalse":
       const answerTrueContainer = document.createElement("div");
+      answerTrueContainer.id = `ans-true`;
 
       const labelTrue = document.createElement("label");
-      labelTrue.htmlFor = "radioTrue";
+      labelTrue.htmlFor = "true";
       labelTrue.innerText = "True";
 
       const radioTrue = document.createElement("input");
       radioTrue.name = "answer";
-      radioTrue.id = "radioTrue";
+      radioTrue.id = "true";
       radioTrue.type = "radio";
       radioTrue.value = true;
 
+      answerTrueContainer.appendChild(radioTrue);
+      answerTrueContainer.appendChild(labelTrue);
+
       const answerFalseContainer = document.createElement("div");
+      answerFalseContainer.id = `ans-false`;
 
       const labelFalse = document.createElement("label");
-      labelFalse.htmlFor = "radioFalse";
+      labelFalse.htmlFor = "false";
       labelFalse.innerText = "False";
 
       const radioFalse = document.createElement("input");
       radioFalse.name = "answer";
-      radioFalse.id = "radioFalse";
+      radioFalse.id = "false";
       radioFalse.type = "radio";
       radioFalse.value = false;
 
-      answerTrueContainer.appendChild(labelTrue);
-      answerTrueContainer.appendChild(radioTrue);
-      answerFalseContainer.appendChild(labelFalse);
       answerFalseContainer.appendChild(radioFalse);
+      answerFalseContainer.appendChild(labelFalse);
 
       possibleAnswersContainer.appendChild(answerTrueContainer);
       possibleAnswersContainer.appendChild(answerFalseContainer);
@@ -136,7 +140,8 @@ const buildQuizQuestion = (question) => {
 
   const button = document.createElement("button");
   button.className = "button";
-  button.innerText = quiz.current < 8 ? "Next question" : "Finish";
+  button.innerText =
+    quiz.current < quiz.questions.length - 1 ? "Next question" : "Finish";
 
   possibleAnswersContainer.appendChild(button);
 
@@ -153,28 +158,62 @@ const onFormSubmit = (event) => {
   event.preventDefault();
   console.log(quiz.current);
   if (quiz.current < quiz.questions.length - 1) {
-    let answer;
+    let answer = [];
     const checkBoxes = document.querySelectorAll(
       "input[type=checkbox]:checked"
     );
-    console.log(checkBoxes);
     if (checkBoxes.length > 0) {
       answer = [];
       Array.from(checkBoxes).forEach((item) => {
         answer.push(item.value);
       });
     } else {
-      answer = event.target.elements.answer.value;
+      answer.push(event.target.elements.answer.value);
     }
-    quiz.answeredQuestions.push(answer);
-    quiz.current += 1;
 
-    displayQuestion(quiz.current);
+    hightlightCorrectAnswer();
+
+    if (
+      quiz.questions[quiz.current].correct_answer.toString() ===
+      answer.toString()
+    ) {
+      quiz.answeredQuestions.push(answer);
+      quiz.score += quiz.questions[quiz.current].points;
+    }
+
+    setTimeout(function () {
+      quiz.current += 1;
+      console.log(`Score: ${quiz.score}`);
+      displayQuestion(quiz.current);
+    }, 3000);
+
     return false;
   }
-  console.log(quiz.answeredQuestions);
   reloadQuiz();
   return false;
+};
+
+const hightlightCorrectAnswer = () => {
+  if (Array.isArray(quiz.questions[quiz.current].correct_answer)) {
+    correctAnswerElement = [];
+    console.log(quiz.questions[quiz.current].correct_answer);
+    quiz.questions[quiz.current].correct_answer.forEach((item) => {
+      correctAnswerElement.push(document.getElementById(`ans-${item}`));
+    });
+
+    correctAnswerElement.forEach((item) => {
+      item.classList.add("highlight");
+    });
+
+    return correctAnswerElement;
+  } else {
+    correctAnswerElement = document.getElementById(
+      `ans-${quiz.questions[quiz.current].correct_answer}`
+    );
+    correctAnswerElement.classList.add("highlight");
+
+    return correctAnswerElement;
+  }
 };
 
 const reloadQuiz = () => {

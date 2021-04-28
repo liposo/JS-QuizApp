@@ -88,3 +88,7 @@ header {
   width: 50%;
   align-self: center;
 }
+
+.highlight {
+  background-color: greenyellow;
+}

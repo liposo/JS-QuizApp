@@ -1,4 +1,5 @@
 const quizRoot = document.getElementById("quiz");
+const loader = document.getElementById("loader");
 const quiz = {
   title: null,
   description: null,
@@ -15,7 +16,6 @@ const buildQuiz = async () => {
   quiz.title = response.title;
   quiz.description = response.description;
 
-  const loader = document.getElementById("loader");
   loader.style.display = "none";
 
   quizRoot.appendChild(buildHeader(quiz.title, quiz.description));
@@ -139,7 +139,9 @@ const buildQuizQuestion = (question) => {
   }
 
   const button = document.createElement("button");
+  button.id = "next";
   button.className = "button";
+  button.disabled = false;
   button.innerText =
     quiz.current < quiz.questions.length - 1 ? "Next question" : "Finish";
 
@@ -156,47 +158,44 @@ const buildQuizQuestion = (question) => {
 
 const onFormSubmit = (event) => {
   event.preventDefault();
-  console.log(quiz.current);
-  if (quiz.current < quiz.questions.length - 1) {
-    let answer = [];
-    const checkBoxes = document.querySelectorAll(
-      "input[type=checkbox]:checked"
-    );
-    if (checkBoxes.length > 0) {
-      answer = [];
-      Array.from(checkBoxes).forEach((item) => {
-        answer.push(item.value);
-      });
-    } else {
-      answer.push(event.target.elements.answer.value);
-    }
 
-    hightlightCorrectAnswer();
+  document.getElementById("next").disabled = true;
 
-    if (
-      quiz.questions[quiz.current].correct_answer.toString() ===
-      answer.toString()
-    ) {
-      quiz.answeredQuestions.push(answer);
-      quiz.score += quiz.questions[quiz.current].points;
-    }
-
-    setTimeout(function () {
-      quiz.current += 1;
-      console.log(`Score: ${quiz.score}`);
-      displayQuestion(quiz.current);
-    }, 3000);
-
-    return false;
+  let answer = [];
+  const checkBoxes = document.querySelectorAll("input[type=checkbox]:checked");
+  if (checkBoxes.length > 0) {
+    answer = [];
+    Array.from(checkBoxes).forEach((item) => {
+      answer.push(item.value);
+    });
+  } else {
+    answer.push(event.target.elements.answer.value);
   }
-  reloadQuiz();
+
+  hightlightCorrectAnswer();
+
+  if (
+    quiz.questions[quiz.current].correct_answer.toString() === answer.toString()
+  ) {
+    quiz.answeredQuestions.push(answer);
+    quiz.score += quiz.questions[quiz.current].points;
+  }
+
+  setTimeout(function () {
+    if (quiz.current < quiz.questions.length - 1) {
+      quiz.current += 1;
+      displayQuestion(quiz.current);
+    } else {
+      showResult();
+    }
+  }, 3000);
+
   return false;
 };
 
 const hightlightCorrectAnswer = () => {
   if (Array.isArray(quiz.questions[quiz.current].correct_answer)) {
     correctAnswerElement = [];
-    console.log(quiz.questions[quiz.current].correct_answer);
     quiz.questions[quiz.current].correct_answer.forEach((item) => {
       correctAnswerElement.push(document.getElementById(`ans-${item}`));
     });
@@ -216,11 +215,58 @@ const hightlightCorrectAnswer = () => {
   }
 };
 
-const reloadQuiz = () => {
-  quiz.answeredQuestions.length = 0;
-  quiz.current = 0;
-  displayQuestion(quiz.current);
-  document.getElementById("answersForm").reset();
+const showResult = async () => {
+  const previousQuestion = document.getElementById("question");
+  if (previousQuestion) {
+    quizRoot.removeChild(previousQuestion);
+  }
+  loader.style.display = "flex";
+
+  const response = await getResult();
+  loader.style.display = "none";
+
+  const scoreElement = document.createElement("h1");
+  scoreElement.style.padding = "22px";
+
+  const totalScore = quiz.questions
+    .map((item) => item.points)
+    .reduce((prev, next) => prev + next);
+  const scoreInPercent = (quiz.score * 100) / totalScore;
+  scoreElement.innerText = `You scored ${scoreInPercent}%`;
+
+  let result;
+  for (let i = 0, length = response.results.length; i < length; i++) {
+    if (scoreInPercent <= response.results[i].maxpoints) {
+      result = response.results[i];
+      break;
+    }
+  }
+
+  let title = result.title;
+  let message = result.message;
+  let imgSrc = result.img;
+
+  const scoreDetails = document.createElement("div");
+  scoreDetails.className = "question-container";
+
+  const scoreImage = document.createElement("img");
+  scoreImage.src = imgSrc;
+  scoreImage.alt = "";
+
+  const scoreTitle = document.createElement("h2");
+  scoreTitle.innerText = title;
+  scoreTitle.style.padding = "22px";
+
+  const scoreMessage = document.createElement("h3");
+  scoreMessage.innerText = message;
+  scoreMessage.style.padding = "22px";
+
+  scoreDetails.appendChild(scoreElement);
+  scoreDetails.appendChild(scoreImage);
+  scoreDetails.appendChild(scoreTitle);
+  scoreDetails.appendChild(scoreMessage);
+
+  quizRoot.appendChild(scoreDetails);
 };
 
 window.onload = function (event) {
